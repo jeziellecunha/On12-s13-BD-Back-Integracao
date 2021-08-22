@@ -3,17 +3,17 @@ const router = express.Router()
 const controller = require("../controllers/petsController")
 
 // post - criacao
-router.post("/", controller.createPet)
+router.post("/pets/create", controller.createPet)
 
-// delete - remoção
+// // delete - remoção
 router.delete("/:id", controller.deletePet)
 
-// put e patch - alteração
+// // put e patch - alteração
 router.put("/:id", controller.updatePet)
-router.patch("/:id/name", controller.updateName)
+router.patch("/:id", controller.updateName)
 
 // get - recuperação
-router.get("/", controller.getAllPets)
-router.get("/:id", controller.getPet)
+router.get("/pets/", controller.getAllPets)
+router.get("/:id", controller.getPetById)
 
 module.exports = router;

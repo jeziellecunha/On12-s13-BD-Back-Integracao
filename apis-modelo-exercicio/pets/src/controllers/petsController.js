@@ -1,137 +1,141 @@
-const pets = require("../models/pets.json")
-const fs = require("fs")
+const pets = require("../models/petsBd.js")
+
 
 const createPet = (req, res) => {
-    const { id, nomeFantasia, endereco, telefone, atende } = req.body
-    pets.push({ id, nomeFantasia, endereco, telefone, atende })
-    fs.writeFile("./src/models/pets.json", JSON.stringify(pets), 'utf8', function (err) { // gravando novo pet no array de pets
-        if (err) {
-            res.status(500).send({ message: err })
-        } else {
-            console.log("Arquivo atualizado com sucesso!")
-            const petFound = pets.find(pet => pet.id == id) // recupero o pet que foi criado no array de pets      
-            res.status(200).send(petFound)
-        }
-    })
-}
+
+    let { nomeFantasia, endereco, telefone, atende } = req.body;
+   
+    let createPets = {
+        "id": Math.random().toString(32).substr(2),
+        nomeFantasia, 
+        endereco, 
+        telefone, 
+        atende
+
+    }
+
+            let newPets = new pets(createPets)
+            newPets.save(function (err){
+                if (err){
+                    res.status(500).send({ "message": err.message })
+                }else{
+                    pets.updateOne({$set: {createPets}}),
+                    res.status(201).send({"message": 'Pet Shop incluído com sucesso!'})
+                }
+            })
+        
+};
 
 const deletePet = (req, res) => {
-    try {
-        const petId = req.params.id
-        const petFound = pets.find(pet => pet.id == petId) // encontro o pet pelo id
-        const petIndex = pets.indexOf(petFound) // identifico o índice do pet no meu array
 
-        if (petIndex >= 0) { // verifico se o pet existe no array de pets
-            pets.splice(petIndex, 1) // removo o pet pelo índice
-            fs.writeFile("./src/models/pets.json", JSON.stringify(pets), 'utf8', function (err) {
-                if (err) {
-                    return res.status(500).send({ message: err })
-                } else {
-                    console.log("Pet deletado com sucesso do arquivo!")
-                    res.sendStatus(204)
-                }
-            })
-        } else {
-            res.status(404).send({ message: "Pet não encontrado para ser deletado" })
+    const petId = req.params.id
+    pets.findOne({id: petId}, function (err, pet){
+        if (err) {
+            res.status(500).send({"message": err.message})
+        }else{
+            if (pet){
+                pets.deleteOne({id: petId }, function (err){
+                    if (err){
+                        res.status(500).send({
+                            "message": err.message,
+                            status: "FAIL"
+                        })
+                    } else {
+                        res.status(200).send({
+                            "message": 'Pet Shop removido com sucesso',
+                            status: "SUCCESS"
+                        })
+                    }
+                })
+            }else {
+                res.status(404).send({ "message": 'Não há Pet Shop com esse id para ser removido.' })
+            }
         }
 
-    } catch (err) {
-        console.log(err)
-        res.status(500).send({ message: "Erro ao deletar o pet" })
-    }
-}
+    })
+
+};
 
 const updatePet = (req, res) => {
-    try {
-        const petId = req.params.id
-        const petToUpdate = req.body //Pego o corpo da requisição com as alterações
-
-        const petFound = pets.find(pet => pet.id == petId) // separo o pet que irei atualizar
-        const petIndex = pets.indexOf(petFound) // separo o indice do pet no array de pets
-
-        if (petIndex >= 0) { // verifico se o pet existe no array de pets
-            pets.splice(petIndex, 1, petToUpdate) // atualizando o array de pets com os novos dados
-
-            fs.writeFile("./src/models/pets.json", JSON.stringify(pets), 'utf8', function (err) {
-                if (err) {
-                    res.status(500).send({ message: err })
-                } else {
-                    console.log("Arquivo atualizado com sucesso!")
-                    const petUpdated = pets.find(pet => pet.id == petId) // separo o pet que modifiquei no array
-                    res.status(200).send(petUpdated) // envio o pet modificado como resposta
-                }
-            })
+    const petId = req.params.id;
+    pets.findOne({ id: petId }, function (err, petFound) {
+        if (err) {
+            res.status(500).send({ "message": err.message })
         } else {
-            res.status(404).send({ message: "Pet não encontrado para ser atualizado" })
+            if (petFound) {
+                pets.updateOne({ id: petId }, { $set: req.body }, function (err) {
+                    if (err) {
+                        res.status(500).send({ "message": err.message })
+                    } else {
+                        res.status(200).send({ "message": 'Pet Shop alterado com sucesso' })
+                    }
+                })
+            } else {
+                res.status(404).send({ "message": 'Não há registro para ser atualizado com esse id' });
+            }
         }
-
-    } catch (err) {
-        res.status(500).send({ message: err })
-    }
-}
+    })
+};
 
 const updateName = (req, res) => {
-    try {
-        const petId = req.params.id
-        const nomeFantasia = req.body.nomeFantasia
-        const petFound = pets.find(pet => pet.id == petId) // encontrando o pet
-        const petIndex = pets.indexOf(petFound) // identifico o índice do pet no meu array
-
-        if (petIndex >= 0) { // verifico se o pet existe no array de pets
-            petFound.nomeFantasia = nomeFantasia //atualizamos o objeto com o novo nome
-            pets.splice(petIndex, 1, petFound) // atualizando o array de pets com o pet atualizado
-
-            fs.writeFile("./src/models/pets.json", JSON.stringify(pets), 'utf8', function (err) {
-                if (err) {
-                    return res.status(500).send({ message: err })
-                } else {
-                    console.log("Arquivo atualizado com sucesso!")
-                    const petpdated = pets.find(pet => pet.id == petId) // separo o pet que modifiquei no array
-                    return res.status(200).send(petpdated) // envio o pet modificado como resposta
-                }
-            })
+    const petId = req.params.id;
+    let newName = req.body.nomeFantasia;
+    pets.findOne({ id: petId }, function (err, petFound) {
+        if (err) {
+            res.status(500).send({ "message": err.message })
         } else {
-            res.status(404).send({ message: "Pet não encontrado para modificar o nome." })
+            if (petFound) {
+                pets.updateOne({ id: petId }, { $set: { nomeFantasia: newName } }, function (err) {
+                    if (err) {
+                        res.status(500).send({ "message": err.message })
+                    } else {
+                        res.status(200).send({ "message": 'Nome do Pet Shop alterado com sucesso' })
+                    }
+                })
+            } else {
+                res.status(404).send({ "message": "Não há registro para ter o nome atualizado com esse id" });
+            }
         }
+    })
 
-    } catch (err) {
-        res.status(500).send({ message: err })
-    }
-}
+};
 
 const getAllPets = (req, res) => {
-    const animal = req.query.animal // puxamos a informação de animal da nossa query string
-    const estado = req.query.estado // puxamos a informação de estado da nossa query string
-    let allPets = pets
-    if (animal) { // se eu tiver passado a query string com o animal na hora de fazer a request...
-        allPets = pets.filter(pet => pet.atende.includes(animal)) // encontro todos os pets que atende o animal
-    }
-    if (estado) {
-        const petByEstado = pets.filter(pet => pet.endereco.includes(estado)) // encontro todos os pets que possuem o estado no endereco
-        if (animal) { // o filtro de animal foi informado?
-            allPets = petByEstado.filter(pet => allPets.includes(pet)) // encontro a interseção dos pets filtrados por animal e endereco
+    
+    pets.find(function (err, petsFound) {
+        if (err) {
+            res.status(500).send({ "message": err.message })
         } else {
-            allPets = petByEstado
+            if (petsFound && petsFound.length > 0) {
+                res.status(200).send(petsFound);
+            } else {
+                res.status(204).send({"message": "Nenhum Pet Shop encontrado."});
+            }
         }
-    }
-    res.status(200).send(allPets) // retorna todos os pets filtrados ou nao
-}
+    })
+};
 
-const getPet = (req, res) => {
-    const petId = req.params.id
-    const petFound = pets.find(pet => pet.id == petId)
-    if (petFound) {
-        res.status(200).send(petFound)
-    } else {
-        res.status(404).send({ message: "Pet não encontrado" })
-    }
-}
+const getPetById = (req, res) => {
+    const resquestId = req.params.id;
+   
+    pets.findOne({ id: resquestId }, function (err, petsFound) {
+        if (err) {
+            res.status(500).send({ "message": err.message })
+        } else {
+            if (petsFound) {
+                res.status(200).send(petsFound.toJSON({ virtuals: true }));
+            } else {
+                res.status(204).send();
+            }
+        }
+    })
+};
 
 module.exports = {
     createPet,
     deletePet,
-    updateName,
     updatePet,
+    updateName,
     getAllPets,
-    getPet,
+    getPetById
 }

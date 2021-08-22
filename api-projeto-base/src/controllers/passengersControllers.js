@@ -1,12 +1,11 @@
-const travels = require("../models/travels.json");
-const passengers = require("../models/passengers.json");
-const fs = require("fs");
-const utils = require("../utils/travelsUtils");
+
+const travels = require("../models/travels")
+const passengers = require("../models/passengers")
 
 const getAllPassengers = (req, res) => {
     res.status(200).send(passengers);
 };
-
+//pegar versão correta de createPassenger
 const createPassenger = (req, res) => {
     let {
         name,
@@ -28,9 +27,9 @@ const createPassenger = (req, res) => {
 
     travels.forEach((travel) => {
         let sameId = travel === travelRequired;
-        // console.log(sameId);
+        // 
         if (sameId) {
-            // console.log(travel.id);
+            // 
             travel.passengersInfos.push(passenger); // adicionando um passageiro à viagem solicitada
         };
     });
@@ -50,98 +49,73 @@ const createPassenger = (req, res) => {
     });
 };
 
-// substituir todo passageiro APESAR do método PUT ser usado para substituir apenas uma parte
+// atualizar o passageiro
 const replacePassenger = (req, res) => {
     const requiredId = req.params.id;
-    const {
-        name,
-        email,
-        documentNumber
-    } = req.body;
-
-    // let passenger = passengers.find(p => p.id == requiredId);
-    let filteredPassenger = utils.filterById(passengers, requiredId);
-    // console.log('PASSENGER', passenger);
-
-    const index = passengers.indexOf(filteredPassenger);
-    // console.log('INDEX', index);
-
-    let updatedPassenger = {
-        id: requiredId,
-        name,
-        email,
-        documentNumber
-    };
-
-    if (index >= 0) { // verifico se o passageiro existe
-        // passageiro encontrado!
-        passengers.splice(index, 1, updatedPassenger) // busco no array o passageiro, excluo o registro antigo e subtituo pelo novo
-        fs.writeFile("./src/models/passengers.json", JSON.stringify(passengers), 'utf8', function (err) {
-            if (err) {
-                res.status(500).send({ message: err }) // caso de erro retorno status 500
-            } else {
-                res.status(200).json([{
-                    "mensagem": "Passageiro substituido no sistema com sucesso",
-                    updatedPassenger
-                }]);
-            }
-        })
-    } else {
-        //passageiro não encontrado
-        res.status(404).send({ message: "Passageiro não encontrado para ser atualizado!" })
-    }
+    passengers.findOne({ id: requiredId }, function (err, passengerFound) {
+        if (err) {
+            res.status(500).send({ message: err.message })
+        }
+        if (passengerFound) {
+            passengers.updateOne({ id: requiredId }, { $set: req.body }, function (err) {
+                if (err) {
+                    res.status(500).send({ message: err.message })
+                }
+                res.status(200).send({ message: "Registro alterado com sucesso" })
+            })
+        } else {
+            res.status(404).send({ message: "Não há registro para ser atualizado com esse id" });
+        }
+    })
 };
-
-// atualizar apenas o nome do passageiro
+    // atualizar apenas o nome do passageiro
 const updateName = (req, res) => {
     const requiredId = req.params.id;
     let newName = req.body.name;
-
-    let filteredPassenger = utils.filterById(passengers, requiredId);
-
-    if (filteredPassenger) {
-        filteredPassenger.name = newName;
-
-        //atualiza passageiro na base de passageiros
-        fs.writeFile("./src/models/passengers.json", JSON.stringify(passengers), 'utf8', function (err) {
-            if (err) {
-                res.status(500).send({ message: err }) // caso de erro retorno status 500
+    passengers.findOne({ id: requiredId }, function (err, passengerFound) {
+        if (err) {
+            res.status(500).send({ message: err.message })
+        } else {
+            if (passengerFound) {
+                passengers.updateOne({ id: requiredId }, { $set: { name: newName } }, function (err) {
+                    if (err) {
+                        res.status(500).send({ message: err.message })
+                    }
+                    res.status(200).send({ message: "Nome alterado com sucesso" })
+                })
             } else {
-                res.status(200).json([{
-                    "mensagem": "Nome do passageiro atualizado com sucesso",
-                    filteredPassenger
-                }]);
+                res.status(404).send({ message: "Não há registro para ter o nome atualizado com esse id" });
             }
-        })
-    } else {
-        res.status(404).send({ "message": "Passageiro não encontrado para ter nome atualizado!" })
-    }
+        }
+    })
 }
-
+//deletar passageiro
 const deletePassenger = (req, res) => {
     const requiredId = req.params.id;
-
-    let filteredPassenger = utils.filterById(passengers, requiredId);
-    const index = passengers.indexOf(filteredPassenger);
-    console.log("achei??")
-    console.log(index)
-    // deleta passageiro da base de passageiros
-    if (index >= 0) {
-        passengers.splice(index, 1)
-
-        fs.writeFile("./src/models/passengers.json", JSON.stringify(passengers), 'utf8', function (err) {
-            if (err) {
-                res.status(500).send({ message: err }) // caso de erro retorno status 500
+    passengers.findOne({ id: requiredId }, function (err, passenger) {
+        if (err) {
+            res.status(500).send({ message: err.message })
+        } else {
+            if (passenger) {
+                //deleteMany remove mais de um registro
+                //deleteOne remove apenas um registro
+                passengers.deleteOne({ id: requiredId }, function (err) {
+                    if (err) {
+                        res.status(500).send({
+                            message: err.message,
+                            status: "FAIL"
+                        })
+                    }
+                    res.status(200).send({
+                        message: 'Passageiro removido com sucesso',
+                        status: "SUCCESS"
+                    })
+                })
             } else {
-                res.status(200).json([{
-                    "mensagem": "Passageiro deletado",
-                    passengers
-                }]);
-            };
-        });
-    } else {
-        res.status(404).json({ mensagem: "Passageiro não encontrado para deletar!" });
-    }
+                res.status(404).send({ message: 'Não há passageiro para ser removido com esse id' })
+            }
+        }
+    })
 };
 
 module.exports = {
@@ -150,4 +124,4 @@ module.exports = {
     replacePassenger,
     updateName,
     deletePassenger
-};
+}
